@@ -1,33 +1,294 @@
-<h1>Orders for Your Products</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seller Orders</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-<% orders.forEach(order => { %>
-  <h2>Order #<%= order.id %> | Status: <%= order.status %> | Total: $<%= order.total %></h2>
-  <table border="1" cellpadding="5">
-    <tr>
-      <th>Product</th>
-      <th>Quantity</th>
-      <th>Price</th>
-    </tr>
-    <% order.items.forEach(item => { %>
-      <tr>
-        <td><%= item.name %></td>
-        <td><%= item.quantity %></td>
-        <td>$<%= item.price %></td>
-      </tr>
-    <% }) %>
-  </table>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
 
-  <% if(order.status === 'Pending') { %>
-    <form action="/seller/orders/update" method="POST">
-      <input type="hidden" name="order_id" value="<%= order.id %>" />
-      <select name="status">
-        <option value="Pending" <%= order.status === 'Pending' ? 'selected' : '' %>>Pending</option>
-        <option value="Shipped">Shipped</option>
-        <option value="Delivered">Delivered</option>
-      </select>
-      <button type="submit">Update Status</button>
-    </form>
-  <% } %>
-  <hr />
-<% }) %>
-<a href="/seller/dashboard">Back to Dashboard</a>
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+      font-size: 2em;
+      text-align: center;
+      padding-bottom: 20px;
+      border-bottom: 3px solid #667eea;
+    }
+
+    .order-card {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+      transition: all 0.3s;
+    }
+
+    .order-card:hover {
+      box-shadow: 0 5px 20px rgba(102, 126, 234, 0.2);
+      transform: translateY(-2px);
+    }
+
+    h2 {
+      color: #333;
+      font-size: 1.3em;
+      margin-bottom: 15px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-size: 0.9em;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+
+    .status-pending {
+      background: #fff3e0;
+      color: #e65100;
+    }
+
+    .status-shipped {
+      background: #e3f2fd;
+      color: #1565c0;
+    }
+
+    .status-delivered {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+
+    .status-processing {
+      background: #e1f5fe;
+      color: #0277bd;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    th {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px;
+      text-align: left;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.9em;
+    }
+
+    td {
+      padding: 15px;
+      border-bottom: 1px solid #f0f0f0;
+      color: #333;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover {
+      background: #f8f9fa;
+    }
+
+    form {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      margin-top: 15px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+    }
+
+    select {
+      padding: 10px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: white;
+      color: #333;
+    }
+
+    select:hover {
+      border-color: #667eea;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    button {
+      padding: 10px 25px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    hr {
+      display: none;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 30px;
+      padding: 12px 30px;
+      background: #f8f9fa;
+      color: #333;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: all 0.3s;
+      border: 2px solid #e0e0e0;
+    }
+
+    .back-link:hover {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+      transform: translateY(-2px);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+
+    .empty-state h2 {
+      background: none;
+      border: none;
+      color: #999;
+      font-size: 1.5em;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 1.5em;
+      }
+
+      h2 {
+        font-size: 1.1em;
+      }
+
+      form {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      select, button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Orders for Your Products</h1>
+
+    <% if (orders.length === 0) { %>
+      <div class="empty-state">
+        <h2>No Orders Yet</h2>
+        <p>Orders containing your products will appear here</p>
+      </div>
+    <% } else { %>
+      <% orders.forEach(order => { %>
+        <div class="order-card">
+          <h2>
+            Order #<%= order.id %> 
+            <span class="status status-<%= order.status.toLowerCase() %>"><%= order.status %></span>
+            | Total: $<%= parseFloat(order.total).toFixed(2) %>
+          </h2>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% order.items.forEach(item => { %>
+                <tr>
+                  <td><strong><%= item.name %></strong></td>
+                  <td><%= item.quantity %></td>
+                  <td>$<%= parseFloat(item.price).toFixed(2) %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+
+          <% if(order.status === 'Pending') { %>
+            <form action="/seller/orders/update-status" method="POST">
+              <input type="hidden" name="order_id" value="<%= order.id %>" />
+              <select name="status">
+                <option value="Pending" <%= order.status === 'Pending' ? 'selected' : '' %>>Pending</option>
+                <option value="Shipped">Shipped</option>
+                <option value="Delivered">Delivered</option>
+              </select>
+              <button type="submit">Update Status</button>
+            </form>
+          <% } %>
+        </div>
+      <% }) %>
+    <% } %>
+
+    <a href="/seller/dashboard" class="back-link">Back to Dashboard</a>
+  </div>
+</body>
+</html>

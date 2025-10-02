@@ -14,7 +14,8 @@ const pool = mysql2.createPool({
   host: "localhost",
   user: "root",
   database: "shopping",
-  password: "abcabc12345Abdul", 
+  //password: "abcabc12345Abdul",
+  password: "",
 });
 
 // Express session
@@ -145,12 +146,16 @@ app.get("/admin/dashboard", requireRole("admin"), async (req, res) => {
     // Get pending orders
     const [pendingResult] = await pool
       .promise()
-      .query("SELECT COUNT(*) AS pendingOrders FROM orders WHERE status = 'Pending'");
+      .query(
+        "SELECT COUNT(*) AS pendingOrders FROM orders WHERE status = 'Pending'"
+      );
 
     // Get delivered orders
     const [deliveredResult] = await pool
       .promise()
-      .query("SELECT COUNT(*) AS deliveredOrders FROM orders WHERE status = 'Delivered'");
+      .query(
+        "SELECT COUNT(*) AS deliveredOrders FROM orders WHERE status = 'Delivered'"
+      );
 
     // Get total products
     const [productsResult] = await pool
@@ -160,17 +165,19 @@ app.get("/admin/dashboard", requireRole("admin"), async (req, res) => {
     // Get total customers
     const [customersResult] = await pool
       .promise()
-      .query("SELECT COUNT(*) AS totalCustomers FROM users WHERE role = 'customer'");
+      .query(
+        "SELECT COUNT(*) AS totalCustomers FROM users WHERE role = 'customer'"
+      );
 
     // Get total sellers
     const [sellersResult] = await pool
       .promise()
-      .query("SELECT COUNT(*) AS totalSellers FROM users WHERE role = 'seller'");
+      .query(
+        "SELECT COUNT(*) AS totalSellers FROM users WHERE role = 'seller'"
+      );
 
     // Get recent orders with customer info
-    const [recentOrders] = await pool
-      .promise()
-      .query(`
+    const [recentOrders] = await pool.promise().query(`
         SELECT o.id, o.total, o.status,
                u.name AS customer
         FROM orders o
@@ -180,11 +187,26 @@ app.get("/admin/dashboard", requireRole("admin"), async (req, res) => {
       `);
 
     // Prepare chart data (last 12 months - dummy data for now, you can calculate real data)
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
     const charts = {
       labels: months,
-      salesSeries: [1200, 1900, 3000, 5000, 2300, 3200, 4100, 3800, 4500, 5200, 6000, 7200],
-      customerSeries: [45, 52, 49, 60, 58, 65, 70, 68, 75, 80, 85, 90]
+      salesSeries: [
+        1200, 1900, 3000, 5000, 2300, 3200, 4100, 3800, 4500, 5200, 6000, 7200,
+      ],
+      customerSeries: [45, 52, 49, 60, 58, 65, 70, 68, 75, 80, 85, 90],
     };
 
     const cards = {
@@ -197,11 +219,11 @@ app.get("/admin/dashboard", requireRole("admin"), async (req, res) => {
       totalSellers: sellersResult[0].totalSellers || 0,
     };
 
-    res.render("admin_dashboard", { 
+    res.render("admin_dashboard", {
       user: req.session.user,
       cards: cards,
       recentOrders: recentOrders,
-      charts: charts
+      charts: charts,
     });
   } catch (err) {
     console.error("Error loading admin dashboard:", err);
@@ -262,7 +284,7 @@ app.get("/admin/users", requireRole("admin"), async (req, res) => {
       users: users,
       totalCustomers: customerCount[0].count,
       totalSellers: sellerCount[0].count,
-      totalAdmins: adminCount[0].count
+      totalAdmins: adminCount[0].count,
     });
   } catch (err) {
     console.error("Error loading manage users:", err);
@@ -283,7 +305,7 @@ app.post("/admin/users/add", requireRole("admin"), async (req, res) => {
     const [existing] = await pool
       .promise()
       .query("SELECT * FROM users WHERE email = ?", [email]);
-    
+
     if (existing.length > 0) {
       return res.redirect("/admin/users?error=Email already exists");
     }
@@ -308,9 +330,7 @@ app.post("/admin/users/delete", requireRole("admin"), async (req, res) => {
   const { user_id } = req.body;
 
   try {
-    await pool
-      .promise()
-      .query("DELETE FROM users WHERE id = ?", [user_id]);
+    await pool.promise().query("DELETE FROM users WHERE id = ?", [user_id]);
 
     res.redirect("/admin/users?success=User deleted successfully");
   } catch (err) {
@@ -360,91 +380,6 @@ app.post(
     );
   }
 );
-
-// SELLER ROUTES
-
-app.get("/seller/dashboard", requireRole("seller"), (req, res) => {
-  res.render("seller_dashboard", { user: req.session.user });
-});
-
-app.get("/seller/products", requireRole("seller"), (req, res) => {
-  pool.query(
-    "SELECT * FROM products WHERE seller_id=?",
-    [req.session.user.id],
-    (err, results) => {
-      if (err) return res.send("Error fetching products");
-      res.render("seller_products", {
-        products: results,
-        user: req.session.user,
-      });
-    }
-  );
-});
-
-// Seller Add Product GET
-app.get("/seller/products/add", requireRole("seller"), (req, res) => {
-  res.render("seller_add_product", { user: req.session.user });
-});
-
-// Seller Add Product POST
-app.post("/seller/products/add", requireRole("seller"), (req, res) => {
-  const { name, price, quantity, image } = req.body;
-  const seller_id = req.session.user.id;
-
-  if (!name || !price || !quantity) {
-    return res.send("Name, price, and quantity are required");
-  }
-
-  pool.query(
-    "INSERT INTO products (name, price, quantity, seller_id, image) VALUES (?, ?, ?, ?, ?)",
-    [name, price, quantity, seller_id, image || null],
-    (err) => {
-      if (err) return res.send("Error adding product: " + err.message);
-      res.redirect("/seller/products");
-    }
-  );
-});
-
-// Seller Orders
-app.get("/seller/orders", requireRole("seller"), (req, res) => {
-  const sellerId = req.session.user.id;
-
-  pool.query(
-    `SELECT o.id AS order_id, o.total, o.status, 
-            oi.product_id, oi.quantity, oi.price, p.name
-     FROM orders o
-     JOIN order_items oi ON o.id = oi.order_id
-     JOIN products p ON oi.product_id = p.id
-     WHERE p.seller_id = ?`,
-    [sellerId],
-    (err, results) => {
-      if (err) return res.send("Error fetching orders: " + err.message);
-
-      const orders = {};
-      results.forEach((row) => {
-        if (!orders[row.order_id]) {
-          orders[row.order_id] = {
-            id: row.order_id,
-            total: row.total,
-            status: row.status,
-            items: [],
-          };
-        }
-        orders[row.order_id].items.push({
-          product_id: row.product_id,
-          name: row.name,
-          quantity: row.quantity,
-          price: row.price,
-        });
-      });
-
-      res.render("seller_orders", {
-        orders: Object.values(orders),
-        user: req.session.user,
-      });
-    }
-  );
-});
 
 // Customer Dashboard - CORRECTED WITH ALL REQUIRED VARIABLES
 app.get("/customer/dashboard", requireRole("customer"), async (req, res) => {
@@ -886,6 +821,285 @@ app.post(
   }
 );
 
+// ADD THESE ROUTES TO YOUR EXISTING app.js FILE
+// Replace the existing seller routes section with these updated routes
+
+// ============= SELLER ROUTES =============
+
+// Seller Dashboard with Statistics
+app.get("/seller/dashboard", requireRole("seller"), async (req, res) => {
+  try {
+    const sellerId = req.session.user.id;
+
+    // Get total products count
+    const [productsCount] = await pool
+      .promise()
+      .query("SELECT COUNT(*) AS count FROM products WHERE seller_id = ?", [
+        sellerId,
+      ]);
+
+    // Get total orders containing seller's products
+    const [ordersCount] = await pool.promise().query(
+      `SELECT COUNT(DISTINCT o.id) AS count 
+       FROM orders o
+       JOIN order_items oi ON o.id = oi.order_id
+       JOIN products p ON oi.product_id = p.id
+       WHERE p.seller_id = ?`,
+      [sellerId]
+    );
+
+    // Get pending orders
+    const [pendingCount] = await pool.promise().query(
+      `SELECT COUNT(DISTINCT o.id) AS count 
+       FROM orders o
+       JOIN order_items oi ON o.id = oi.order_id
+       JOIN products p ON oi.product_id = p.id
+       WHERE p.seller_id = ? AND o.status = 'Pending'`,
+      [sellerId]
+    );
+
+    // Get total revenue
+    const [revenueResult] = await pool.promise().query(
+      `SELECT COALESCE(SUM(oi.price * oi.quantity), 0) AS revenue
+       FROM order_items oi
+       JOIN products p ON oi.product_id = p.id
+       WHERE p.seller_id = ?`,
+      [sellerId]
+    );
+
+    const stats = {
+      totalProducts: productsCount[0].count,
+      totalOrders: ordersCount[0].count,
+      pendingOrders: pendingCount[0].count,
+      totalRevenue: parseFloat(revenueResult[0].revenue) || 0,
+    };
+
+    res.render("seller_dashboard", {
+      user: req.session.user,
+      stats: stats,
+    });
+  } catch (err) {
+    console.error("Error loading seller dashboard:", err);
+    res.send("Error loading dashboard: " + err.message);
+  }
+});
+
+// Seller Products List
+app.get("/seller/products", requireRole("seller"), (req, res) => {
+  pool.query(
+    "SELECT * FROM products WHERE seller_id=? ORDER BY id DESC",
+    [req.session.user.id],
+    (err, results) => {
+      if (err) return res.send("Error fetching products");
+      res.render("seller_products", {
+        products: results,
+        user: req.session.user,
+      });
+    }
+  );
+});
+
+// Seller Add Product GET
+app.get("/seller/products/add", requireRole("seller"), (req, res) => {
+  res.render("seller_add_product", { user: req.session.user });
+});
+
+// Seller Add Product POST
+app.post("/seller/products/add", requireRole("seller"), (req, res) => {
+  const { name, price, quantity, image } = req.body;
+  const seller_id = req.session.user.id;
+
+  if (!name || !price || !quantity) {
+    return res.send("Name, price, and quantity are required");
+  }
+
+  pool.query(
+    "INSERT INTO products (name, price, quantity, seller_id, image) VALUES (?, ?, ?, ?, ?)",
+    [name, price, quantity, seller_id, image || null],
+    (err) => {
+      if (err) return res.send("Error adding product: " + err.message);
+      res.redirect("/seller/products");
+    }
+  );
+});
+
+// Seller Edit Product GET
+app.get(
+  "/seller/products/edit/:id",
+  requireRole("seller"),
+  async (req, res) => {
+    try {
+      const [products] = await pool
+        .promise()
+        .query("SELECT * FROM products WHERE id = ? AND seller_id = ?", [
+          req.params.id,
+          req.session.user.id,
+        ]);
+
+      if (products.length === 0) {
+        return res.send("Product not found or access denied");
+      }
+
+      res.render("seller_edit_product", {
+        product: products[0],
+        user: req.session.user,
+      });
+    } catch (err) {
+      res.send("Error loading product: " + err.message);
+    }
+  }
+);
+
+// Seller Edit Product POST
+app.post(
+  "/seller/products/edit/:id",
+  requireRole("seller"),
+  async (req, res) => {
+    const { name, price, quantity, image } = req.body;
+
+    try {
+      await pool
+        .promise()
+        .query(
+          "UPDATE products SET name = ?, price = ?, quantity = ?, image = ? WHERE id = ? AND seller_id = ?",
+          [
+            name,
+            price,
+            quantity,
+            image || null,
+            req.params.id,
+            req.session.user.id,
+          ]
+        );
+
+      res.redirect("/seller/products");
+    } catch (err) {
+      res.send("Error updating product: " + err.message);
+    }
+  }
+);
+
+// Seller Delete Product POST
+app.post("/seller/products/delete", requireRole("seller"), async (req, res) => {
+  const { product_id } = req.body;
+
+  try {
+    await pool
+      .promise()
+      .query("DELETE FROM products WHERE id = ? AND seller_id = ?", [
+        product_id,
+        req.session.user.id,
+      ]);
+
+    res.redirect("/seller/products");
+  } catch (err) {
+    res.send("Error deleting product: " + err.message);
+  }
+});
+
+// Seller Orders - View all orders containing their products
+app.get("/seller/orders", requireRole("seller"), async (req, res) => {
+  const sellerId = req.session.user.id;
+  const message = req.query.message || null;
+
+  try {
+    const [results] = await pool.promise().query(
+      `SELECT o.id AS order_id, o.total, o.status, 
+              oi.product_id, oi.quantity, oi.price, p.name
+       FROM orders o
+       JOIN order_items oi ON o.id = oi.order_id
+       JOIN products p ON oi.product_id = p.id
+       WHERE p.seller_id = ?
+       ORDER BY o.id DESC`,
+      [sellerId]
+    );
+
+    const orders = {};
+    results.forEach((row) => {
+      if (!orders[row.order_id]) {
+        orders[row.order_id] = {
+          id: row.order_id,
+          total: row.total,
+          status: row.status,
+          items: [],
+        };
+      }
+      orders[row.order_id].items.push({
+        product_id: row.product_id,
+        name: row.name,
+        quantity: row.quantity,
+        price: row.price,
+      });
+    });
+
+    res.render("seller_orders", {
+      orders: Object.values(orders),
+      user: req.session.user,
+      message: message,
+    });
+  } catch (err) {
+    res.send("Error fetching orders: " + err.message);
+  }
+});
+
+// Seller Update Order Status (Approve/Process/Deliver)
+app.post(
+  "/seller/orders/update-status",
+  requireRole("seller"),
+  async (req, res) => {
+    const { order_id, status } = req.body;
+
+    try {
+      await pool
+        .promise()
+        .query("UPDATE orders SET status = ? WHERE id = ?", [status, order_id]);
+
+      res.redirect("/seller/orders?message=Order status updated successfully");
+    } catch (err) {
+      res.send("Error updating order: " + err.message);
+    }
+  }
+);
+
+// Seller Reject Order
+app.post("/seller/orders/reject", requireRole("seller"), async (req, res) => {
+  const { order_id } = req.body;
+  const connection = await pool.promise().getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // Get order items to restore stock
+    const [orderItems] = await connection.query(
+      "SELECT product_id, quantity FROM order_items WHERE order_id = ?",
+      [order_id]
+    );
+
+    // Restore product quantities
+    for (const item of orderItems) {
+      await connection.query(
+        "UPDATE products SET quantity = quantity + ? WHERE id = ?",
+        [item.quantity, item.product_id]
+      );
+    }
+
+    // Delete order items
+    await connection.query("DELETE FROM order_items WHERE order_id = ?", [
+      order_id,
+    ]);
+
+    // Delete order
+    await connection.query("DELETE FROM orders WHERE id = ?", [order_id]);
+
+    await connection.commit();
+    res.redirect("/seller/orders?message=Order rejected and stock restored");
+  } catch (err) {
+    await connection.rollback();
+    res.send("Error rejecting order: " + err.message);
+  } finally {
+    connection.release();
+  }
+});
 // SERVER
 const PORT = 3000;
 app.listen(PORT, () => {
