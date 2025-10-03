@@ -1,106 +1,406 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin - Orders</title>
-  <link rel="stylesheet" href="/css/adminOrders.css">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="/css/admnProducts.css">
   <style>
     
   </style>
 </head>
 <body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar mobile-hidden" id="sidebar">
+      <div class="brand">
+        <span class="logo" aria-hidden="true"></span>
+        <div>
+          <div class="title">EASY SHOP Admin <span class="pro"></span></div>
+          <div class="muted" style="font-size:0.85rem;margin-top:4px">Manage your store</div>
+        </div>
+      </div>
 
-  <!-- Header -->
-  <header class="header">
-    <div class="header-content">
-      <div class="logo">We Shop Admin</div>
-      <a href="/logout" class="logout-btn">Logout</a>
-    </div>
-  </header>
-
-  <div class="container">
-    
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <nav>
-        <a href="/admin/dashboard">Dashboard</a>
-        <a href="/admin/products">Products</a>
-        <a href="/admin/orders" class="active">Orders</a>
-        <a href="/admin/users">Users</a>
+      <nav class="side-nav" aria-label="Main navigation">
+        <a href="/admin/dashboard"><span class="icon"><i class="fa-solid fa-tachometer-alt"></i></span> Dashboard</a>
+        <a href="/admin/products"><span class="icon"><i class="fa-solid fa-box"></i></span> Products</a>
+        <a href="/admin/orders" class="active"><span class="icon"><i class="fa-solid fa-cart-shopping"></i></span> Orders</a>
+        <a href="/admin/users"><span class="icon"><i class="fa-solid fa-users"></i></span> Users</a>
       </nav>
+
+      <div class="sidebar-footer">
+        © <span id="year"></span> EASY SHOP
+      </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="main-content">
+    <!-- MAIN -->
+    <div class="main-wrap">
+      <header class="topbar">
+        <div class="top-left">
+          <button class="hamburger" id="hamburger" title="Open menu">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="heading">
+            <div class="brand">EASY SHOP Admin</div>
+            <div class="subtitle muted">Orders</div>
+          </div>
+        </div>
 
-      <!-- Page Header -->
-      <div class="page-header">
-        <h2 class="page-title">All Orders</h2>
-      </div>
+        <div class="top-actions">
+          <div class="search-field" role="search" aria-label="Search">
+            <i class="fa-solid fa-magnifying-glass muted"></i>
+            <input type="search" id="searchInput" placeholder="Search orders..." />
+          </div>
+          <a href="/logout" class="btn-logout">Logout</a>
+        </div>
+      </header>
 
-      <!-- Stats Cards -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Total Orders</div>
-          <div class="stat-value"><%= orders.length %></div>
+      <main>
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Orders</div>
+            <div class="stat-value"><%= orders.length %></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Pending</div>
+            <div class="stat-value"><%= orders.filter(o => o.status === 'Pending').length %></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Shipped</div>
+            <div class="stat-value"><%= orders.filter(o => o.status === 'Shipped').length %></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Delivered</div>
+            <div class="stat-value"><%= orders.filter(o => o.status === 'Delivered').length %></div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-label">Pending</div>
-          <div class="stat-value"><%= orders.filter(o => o.status === 'pending').length %></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Processing</div>
-          <div class="stat-value"><%= orders.filter(o => o.status === 'processing').length %></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Delivered</div>
-          <div class="stat-value"><%= orders.filter(o => o.status === 'delivered').length %></div>
-        </div>
-      </div>
 
-      <!-- Orders Table -->
-      <div class="table-container">
-        <% if (orders.length > 0) { %>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>Customer ID</th>
-                <th>Product ID</th>
-                <th>Quantity</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% orders.forEach(o => { %>
-              <tr>
-                <td>#<%= o.id %></td>
-                <td><%= o.customer_id %></td>
-                <td><%= o.product_id %></td>
-                <td><%= o.quantity %></td>
-                <td>
-                  <span class="status-badge status-<%= o.status %>">
-                    <%= o.status %>
-                  </span>
-                </td>
-              </tr>
-              <% }) %>
-            </tbody>
-          </table>
-        </div>
-        <% } else { %>
-        <div class="empty-state">
-          <div class="empty-state-icon">📦</div>
-          <div class="empty-state-title">No Orders Yet</div>
-          <p class="empty-state-text">Orders will appear here once customers start placing them.</p>
-        </div>
-        <% } %>
-      </div>
+        <!-- Orders Table -->
+        <div class="table-box">
+          <div class="header page-header">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="page-title">All Orders</div>
+              <div class="muted" style="font-size:0.9rem">Order management</div>
+            </div>
+          </div>
 
-    </main>
+          <div style="padding:16px; overflow-x:auto;">
+            <% if (orders.length > 0) { %>
+            <table id="ordersTable">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Customer ID</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% orders.forEach(o => { %>
+                <tr data-order-id="<%= o.id %>">
+                  <td>#<%= o.id %></td>
+                  <td><%= o.customer_id %></td>
+                  <td class="order-total">$<%= parseFloat(o.total).toFixed(2) %></td>
+                  <td>
+                    <span class="status-badge status-<%= o.status.toLowerCase() %>">
+                      <%= o.status %>
+                    </span>
+                  </td>
+                  <td class="actions">
+                    <button
+                      class="edit-btn"
+                      type="button"
+                      data-id="<%= o.id %>"
+                      data-status="<%= o.status %>"
+                    >
+                      Update Status
+                    </button>
+                    <button
+                      class="delete-btn"
+                      type="button"
+                      data-id="<%= o.id %>"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+            <% } else { %>
+            <div class="empty-state">
+              <div class="empty-state-icon">📦</div>
+              <div class="empty-state-title">No Orders Yet</div>
+              <p class="empty-state-text">Orders will appear here once customers start placing them.</p>
+            </div>
+            <% } %>
+          </div>
+        </div>
+      </main>
+    </div>
   </div>
 
+  <!-- Update Status Modal -->
+  <div id="editBackdrop" class="modal-backdrop" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal" role="document" aria-labelledby="editTitle">
+      <h3 id="editTitle">Update Order Status</h3>
+      <form id="editForm">
+        <div class="grid">
+          <div style="grid-column: 1 / -1;">
+            <label for="editStatus">Order Status</label>
+            <select id="editStatus" name="status" required>
+              <option value="Pending">Pending</option>
+              <option value="Shipped">Shipped</option>
+              <option value="Delivered">Delivered</option>
+            </select>
+          </div>
+        </div>
+
+        <input type="hidden" id="editOrderId" name="orderId" />
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-cancel" id="editCancel">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Status</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Modal -->
+  <div id="deleteBackdrop" class="modal-backdrop" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal" role="document" aria-labelledby="deleteTitle">
+      <h3 id="deleteTitle">Confirm Delete</h3>
+      <p id="deleteMsg" style="color:#475569;margin-top:6px">Are you sure you want to delete this order?</p>
+
+      <div class="modal-actions" style="margin-top:16px;">
+        <button type="button" class="btn btn-cancel" id="deleteCancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="deleteConfirm">Yes, delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="notification" class="notification" style="display:none;">
+    <span id="notificationMessage"></span>
+  </div>
+
+  <script>
+    // Fill year
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Mobile sidebar toggle
+    const sidebar = document.getElementById('sidebar');
+    const hamburger = document.getElementById('hamburger');
+    hamburger.addEventListener('click', () => {
+      if (sidebar.classList.contains('mobile-hidden')) {
+        sidebar.classList.remove('mobile-hidden');
+        sidebar.style.position = 'fixed';
+        sidebar.style.left = '12px';
+        sidebar.style.top = '12px';
+        sidebar.style.zIndex = 60;
+        sidebar.style.height = 'calc(100vh - 24px)';
+      } else {
+        sidebar.classList.add('mobile-hidden');
+        sidebar.style.position = '';
+        sidebar.style.left = '';
+        sidebar.style.top = '';
+        sidebar.style.zIndex = '';
+      }
+    });
+
+    function handleResize() {
+      if (window.innerWidth > 1000) {
+        sidebar.classList.remove('mobile-hidden');
+        sidebar.style.position = 'sticky';
+      } else {
+        sidebar.classList.add('mobile-hidden');
+      }
+    }
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    const tableRows = document.querySelectorAll('#ordersTable tbody tr');
+
+    if (searchInput && tableRows.length > 0) {
+      searchInput.addEventListener('input', () => {
+        const query = searchInput.value.toLowerCase();
+        tableRows.forEach(row => {
+          const rowText = row.textContent.toLowerCase();
+          row.style.display = rowText.includes(query) ? '' : 'none';
+        });
+      });
+    }
+
+    // Notification system
+    function showNotification(message, type = 'success') {
+      const notification = document.getElementById('notification');
+      const messageEl = document.getElementById('notificationMessage');
+      
+      messageEl.textContent = message;
+      notification.className = `notification ${type}`;
+      notification.style.display = 'block';
+      
+      setTimeout(() => {
+        notification.style.display = 'none';
+      }, 3000);
+    }
+
+    // Modal elements
+    const editBackdrop = document.getElementById('editBackdrop');
+    const deleteBackdrop = document.getElementById('deleteBackdrop');
+
+    const editForm = document.getElementById('editForm');
+    const editStatus = document.getElementById('editStatus');
+    const editOrderId = document.getElementById('editOrderId');
+    const editCancel = document.getElementById('editCancel');
+
+    const deleteMsg = document.getElementById('deleteMsg');
+    const deleteCancel = document.getElementById('deleteCancel');
+    const deleteConfirm = document.getElementById('deleteConfirm');
+
+    let currentDeleteId = null;
+
+    // Helpers to open/close modals
+    function showModal(backdrop) {
+      backdrop.style.display = 'flex';
+      backdrop.setAttribute('aria-hidden', 'false');
+      const first = backdrop.querySelector('input, button, select, [tabindex="0"]');
+      if (first) first.focus();
+      document.body.style.overflow = 'hidden';
+    }
+    
+    function hideModal(backdrop) {
+      backdrop.style.display = 'none';
+      backdrop.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    // Edit button handlers
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const status = btn.dataset.status || 'Pending';
+
+        editStatus.value = status;
+        editOrderId.value = id;
+
+        showModal(editBackdrop);
+      });
+    });
+
+    // Edit form submission
+    editForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const orderId = editOrderId.value;
+      const status = editStatus.value;
+      
+      try {
+        const response = await fetch(`/admin/orders/update/${orderId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          showNotification('Order status updated successfully!', 'success');
+          hideModal(editBackdrop);
+          
+          // Reload page to show updated data
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } else {
+          showNotification(result.error || 'Failed to update order', 'error');
+        }
+      } catch (error) {
+        showNotification('Error updating order', 'error');
+        console.error('Error:', error);
+      }
+    });
+
+    // Edit modal cancel/overlay handlers
+    editCancel.addEventListener('click', () => hideModal(editBackdrop));
+    editBackdrop.addEventListener('click', (e) => {
+      if (e.target === editBackdrop) hideModal(editBackdrop);
+    });
+
+    // Delete button handlers
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentDeleteId = btn.dataset.id;
+        deleteMsg.textContent = `Are you sure you want to permanently delete order #${currentDeleteId}? This action cannot be undone.`;
+        showModal(deleteBackdrop);
+      });
+    });
+
+    // Delete confirmation handler
+    deleteConfirm.addEventListener('click', async () => {
+      if (!currentDeleteId) return;
+
+      try {
+        const response = await fetch(`/admin/orders/delete/${currentDeleteId}`, {
+          method: 'POST'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          showNotification('Order deleted successfully!', 'success');
+          hideModal(deleteBackdrop);
+          
+          // Remove the row from table
+          const row = document.querySelector(`tr[data-order-id="${currentDeleteId}"]`);
+          if (row) {
+            row.style.transition = 'opacity 0.3s ease';
+            row.style.opacity = '0';
+            setTimeout(() => row.remove(), 300);
+          }
+          
+          currentDeleteId = null;
+        } else {
+          showNotification(result.error || 'Failed to delete order', 'error');
+        }
+      } catch (error) {
+        showNotification('Error deleting order', 'error');
+        console.error('Error:', error);
+      }
+    });
+
+    // Delete cancel/overlay handlers
+    deleteCancel.addEventListener('click', () => {
+      hideModal(deleteBackdrop);
+      currentDeleteId = null;
+    });
+    
+    deleteBackdrop.addEventListener('click', (e) => {
+      if (e.target === deleteBackdrop) {
+        hideModal(deleteBackdrop);
+        currentDeleteId = null;
+      }
+    });
+
+    // Close modals with Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (editBackdrop.style.display === 'flex') hideModal(editBackdrop);
+        if (deleteBackdrop.style.display === 'flex') {
+          hideModal(deleteBackdrop);
+          currentDeleteId = null;
+        }
+      }
+    });
+  </script>
 </body>
 </html>

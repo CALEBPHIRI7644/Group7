@@ -249,45 +249,122 @@
         transform: none;
       }
 
-      /* Footer */
+      /* Modern Footer */
       footer {
-        background: #2d3748;
-        color: white;
-        padding: 2rem;
+        background: #1a202c;
+        color: #e2e8f0;
+        padding: 3rem 2rem 1.5rem;
         margin-top: 4rem;
       }
 
-      .footer-content {
+      .footer-container {
         max-width: 1200px;
         margin: 0 auto;
-        text-align: center;
       }
 
-      .footer-content a {
+      .footer-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+      }
+
+      .footer-section h3 {
         color: white;
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+      }
+
+      .footer-section p {
+        color: #cbd5e0;
+        line-height: 1.8;
+        margin-bottom: 1rem;
+      }
+
+      .footer-links {
+        list-style: none;
+      }
+
+      .footer-links li {
+        margin-bottom: 0.75rem;
+      }
+
+      .footer-links a {
+        color: #cbd5e0;
         text-decoration: none;
-        margin: 0 0.5rem;
-      }
-
-      .footer-content a:hover {
-        text-decoration: underline;
-      }
-
-      .social-icons {
+        transition: color 0.3s;
         display: flex;
-        justify-content: center;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .footer-links a:hover {
+        color: #667eea;
+      }
+
+      .contact-info {
+        list-style: none;
+      }
+
+      .contact-info li {
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #cbd5e0;
+      }
+
+      .social-links {
+        display: flex;
         gap: 1rem;
         margin-top: 1rem;
       }
 
-      .social-icon {
-        font-size: 1.5rem;
-        cursor: pointer;
-        transition: transform 0.3s;
+      .social-link {
+        width: 40px;
+        height: 40px;
+        background: #2d3748;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-decoration: none;
+        transition: background 0.3s, transform 0.3s;
+        font-size: 1.2rem;
       }
 
-      .social-icon:hover {
-        transform: scale(1.2);
+      .social-link:hover {
+        background: #667eea;
+        transform: translateY(-3px);
+      }
+
+      .footer-bottom {
+        border-top: 1px solid #2d3748;
+        padding-top: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .footer-bottom-links {
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+      }
+
+      .footer-bottom-links a {
+        color: #cbd5e0;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.3s;
+      }
+
+      .footer-bottom-links a:hover {
+        color: #667eea;
       }
 
       .empty-message {
@@ -320,6 +397,15 @@
           grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
           gap: 1rem;
         }
+
+        .footer-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .footer-bottom {
+          flex-direction: column;
+          text-align: center;
+        }
       }
     </style>
   </head>
@@ -347,7 +433,7 @@
     <!-- Hero Section -->
     <div class="hero">
       <h1>Welcome to SHOP EASY</h1>
-      <p>Your one-stop shop for amazing deals and quality products! 🛍️</p>
+      <p>Your one-stop shop for amazing deals and quality products!</p>
       <button onclick="window.location.href='/register1'">
         Start Shopping Now
       </button>
@@ -355,7 +441,7 @@
 
     <!-- Latest Products Section -->
     <section id="latest-products">
-      <h2 class="section-title">Latest Products ✨</h2>
+      <h2 class="section-title">Latest Products</h2>
       <% if (latestProducts && latestProducts.length > 0) { %>
       <div class="latest-products">
         <% latestProducts.forEach(product => { %>
@@ -363,49 +449,12 @@
           <div class="product-image-container">
             <% if (product.image) { %>
             <img
-              src="/images/<%= product.image %>"
+              src="/uploads/<%= product.image %>"
               alt="<%= product.name %>"
-              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+              onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f7fafc%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 font-size=%2260%22 text-anchor=%22middle%22 dy=%22.3em%22%3E📦%3C/text%3E%3C/svg%3E';"
             />
-            <div class="product-image-placeholder" style="display: none">
-              <%= product.name.toLowerCase().includes('phone') ? '📱' :
-              product.name.toLowerCase().includes('laptop') ? '💻' :
-              product.name.toLowerCase().includes('head') ||
-              product.name.toLowerCase().includes('earbud') ? '🎧' :
-              product.name.toLowerCase().includes('watch') ? '⌚' :
-              product.name.toLowerCase().includes('mouse') ||
-              product.name.toLowerCase().includes('keyboard') ? '⌨️' :
-              product.name.toLowerCase().includes('chair') ? '🪑' :
-              product.name.toLowerCase().includes('chip') ||
-              product.name.toLowerCase().includes('banana') ? '🍌' :
-              product.name.toLowerCase().includes('monitor') ? '🖥️' :
-              product.name.toLowerCase().includes('speaker') ? '🔊' :
-              product.name.toLowerCase().includes('drive') ? '💾' :
-              product.name.toLowerCase().includes('tablet') ? '📱' :
-              product.name.toLowerCase().includes('printer') ? '🖨️' :
-              product.name.toLowerCase().includes('lamp') ? '💡' :
-              product.name.toLowerCase().includes('charger') ? '🔌' : '📦' %>
-            </div>
             <% } else { %>
-            <div class="product-image-placeholder">
-              <%= product.name.toLowerCase().includes('phone') ? '📱' :
-              product.name.toLowerCase().includes('laptop') ? '💻' :
-              product.name.toLowerCase().includes('head') ||
-              product.name.toLowerCase().includes('earbud') ? '🎧' :
-              product.name.toLowerCase().includes('watch') ? '⌚' :
-              product.name.toLowerCase().includes('mouse') ||
-              product.name.toLowerCase().includes('keyboard') ? '⌨️' :
-              product.name.toLowerCase().includes('chair') ? '🪑' :
-              product.name.toLowerCase().includes('chip') ||
-              product.name.toLowerCase().includes('banana') ? '🍌' :
-              product.name.toLowerCase().includes('monitor') ? '🖥️' :
-              product.name.toLowerCase().includes('speaker') ? '🔊' :
-              product.name.toLowerCase().includes('drive') ? '💾' :
-              product.name.toLowerCase().includes('tablet') ? '📱' :
-              product.name.toLowerCase().includes('printer') ? '🖨️' :
-              product.name.toLowerCase().includes('lamp') ? '💡' :
-              product.name.toLowerCase().includes('charger') ? '🔌' : '📦' %>
-            </div>
+            <div class="product-image-placeholder">📦</div>
             <% } %>
           </div>
           <div class="product-details">
@@ -415,23 +464,16 @@
             </div>
             <div class="product-stock">
               <% if (product.quantity > 20) { %>
-              <span class="stock-badge in-stock"
-                >✓ In Stock (<%= product.quantity %>)</span
-              >
+              <span class="stock-badge in-stock">In Stock (<%= product.quantity %>)</span>
               <% } else if (product.quantity > 0) { %>
-              <span class="stock-badge low-stock"
-                >⚠ Low Stock (<%= product.quantity %>)</span
-              >
+              <span class="stock-badge low-stock">Low Stock (<%= product.quantity %>)</span>
               <% } else { %>
-              <span class="stock-badge out-of-stock">✗ Out of Stock</span>
+              <span class="stock-badge out-of-stock">Out of Stock</span>
               <% } %>
             </div>
             <% if (product.quantity > 0) { %>
-            <button
-              class="add-to-cart"
-              onclick="window.location.href='/register1'"
-            >
-              🛒 Add to Cart
+            <button class="add-to-cart" onclick="window.location.href='/register1'">
+              Add to Cart
             </button>
             <% } else { %>
             <button class="add-to-cart" disabled>Out of Stock</button>
@@ -449,7 +491,7 @@
 
     <!-- All Products Section -->
     <section id="all-products">
-      <h2 class="section-title">All Available Products 📦</h2>
+      <h2 class="section-title">All Available Products</h2>
       <% if (allProducts && allProducts.length > 0) { %>
       <div class="products-grid">
         <% allProducts.forEach(product => { %>
@@ -457,49 +499,12 @@
           <div class="product-image-container">
             <% if (product.image) { %>
             <img
-              src="/images/<%= product.image %>"
+              src="/uploads/<%= product.image %>"
               alt="<%= product.name %>"
-              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+              onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect fill=%22%23f7fafc%22 width=%22200%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 font-size=%2260%22 text-anchor=%22middle%22 dy=%22.3em%22%3E📦%3C/text%3E%3C/svg%3E';"
             />
-            <div class="product-image-placeholder" style="display: none">
-              <%= product.name.toLowerCase().includes('phone') ? '📱' :
-              product.name.toLowerCase().includes('laptop') ? '💻' :
-              product.name.toLowerCase().includes('head') ||
-              product.name.toLowerCase().includes('earbud') ? '🎧' :
-              product.name.toLowerCase().includes('watch') ? '⌚' :
-              product.name.toLowerCase().includes('mouse') ||
-              product.name.toLowerCase().includes('keyboard') ? '⌨️' :
-              product.name.toLowerCase().includes('chair') ? '🪑' :
-              product.name.toLowerCase().includes('chip') ||
-              product.name.toLowerCase().includes('banana') ? '🍌' :
-              product.name.toLowerCase().includes('monitor') ? '🖥️' :
-              product.name.toLowerCase().includes('speaker') ? '🔊' :
-              product.name.toLowerCase().includes('drive') ? '💾' :
-              product.name.toLowerCase().includes('tablet') ? '📱' :
-              product.name.toLowerCase().includes('printer') ? '🖨️' :
-              product.name.toLowerCase().includes('lamp') ? '💡' :
-              product.name.toLowerCase().includes('charger') ? '🔌' : '📦' %>
-            </div>
             <% } else { %>
-            <div class="product-image-placeholder">
-              <%= product.name.toLowerCase().includes('phone') ? '📱' :
-              product.name.toLowerCase().includes('laptop') ? '💻' :
-              product.name.toLowerCase().includes('head') ||
-              product.name.toLowerCase().includes('earbud') ? '🎧' :
-              product.name.toLowerCase().includes('watch') ? '⌚' :
-              product.name.toLowerCase().includes('mouse') ||
-              product.name.toLowerCase().includes('keyboard') ? '⌨️' :
-              product.name.toLowerCase().includes('chair') ? '🪑' :
-              product.name.toLowerCase().includes('chip') ||
-              product.name.toLowerCase().includes('banana') ? '🍌' :
-              product.name.toLowerCase().includes('monitor') ? '🖥️' :
-              product.name.toLowerCase().includes('speaker') ? '🔊' :
-              product.name.toLowerCase().includes('drive') ? '💾' :
-              product.name.toLowerCase().includes('tablet') ? '📱' :
-              product.name.toLowerCase().includes('printer') ? '🖨️' :
-              product.name.toLowerCase().includes('lamp') ? '💡' :
-              product.name.toLowerCase().includes('charger') ? '🔌' : '📦' %>
-            </div>
+            <div class="product-image-placeholder">📦</div>
             <% } %>
           </div>
           <div class="product-details">
@@ -509,23 +514,16 @@
             </div>
             <div class="product-stock">
               <% if (product.quantity > 20) { %>
-              <span class="stock-badge in-stock"
-                >✓ In Stock (<%= product.quantity %>)</span
-              >
+              <span class="stock-badge in-stock">In Stock (<%= product.quantity %>)</span>
               <% } else if (product.quantity > 0) { %>
-              <span class="stock-badge low-stock"
-                >⚠ Low Stock (<%= product.quantity %>)</span
-              >
+              <span class="stock-badge low-stock">Low Stock (<%= product.quantity %>)</span>
               <% } else { %>
-              <span class="stock-badge out-of-stock">✗ Out of Stock</span>
+              <span class="stock-badge out-of-stock">Out of Stock</span>
               <% } %>
             </div>
             <% if (product.quantity > 0) { %>
-            <button
-              class="add-to-cart"
-              onclick="window.location.href='/register1'"
-            >
-              🛒 Add to Cart
+            <button class="add-to-cart" onclick="window.location.href='/register1'">
+              Add to Cart
             </button>
             <% } else { %>
             <button class="add-to-cart" disabled>Out of Stock</button>
@@ -541,18 +539,70 @@
       <% } %>
     </section>
 
-    <!-- Footer -->
+    <!-- Modern Footer -->
     <footer id="footer">
-      <div class="footer-content">
-        <p>&copy; 2025 SHOP EASY. All rights reserved.</p>
-        <div style="margin: 1rem 0">
-          <a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a> |
-          <a href="#">Contact Us</a>
+      <div class="footer-container">
+        <div class="footer-grid">
+          <!-- About Section -->
+          <div class="footer-section">
+            <h3>About SHOP EASY</h3>
+            <p>
+              Your trusted online marketplace for quality products at competitive prices. 
+              We connect buyers with verified sellers to ensure the best shopping experience.
+            </p>
+            <div class="social-links">
+              <a href="#" class="social-link" title="Facebook">f</a>
+              <a href="#" class="social-link" title="Twitter">𝕏</a>
+              <a href="#" class="social-link" title="Instagram">📷</a>
+              <a href="#" class="social-link" title="LinkedIn">in</a>
+            </div>
+          </div>
+
+          <!-- Quick Links -->
+          <div class="footer-section">
+            <h3>Quick Links</h3>
+            <ul class="footer-links">
+              <li><a href="/">Home</a></li>
+              <li><a href="#all-products">Shop</a></li>
+              <li><a href="/register1">Create Account</a></li>
+              <li><a href="/login">Sign In</a></li>
+              <li><a href="#latest-products">New Arrivals</a></li>
+            </ul>
+          </div>
+
+          <!-- Customer Service -->
+          <div class="footer-section">
+            <h3>Customer Service</h3>
+            <ul class="footer-links">
+              <li><a href="#">Help Center</a></li>
+              <li><a href="#">Track Order</a></li>
+              <li><a href="#">Returns & Refunds</a></li>
+              <li><a href="#">Shipping Info</a></li>
+              <li><a href="#">FAQs</a></li>
+            </ul>
+          </div>
+
+          <!-- Contact Info -->
+          <div class="footer-section">
+            <h3>Contact Us</h3>
+            <ul class="contact-info">
+              <li>📍 Blantyre, Malawi</li>
+              <li>📧 support@shopeasy.com</li>
+              <li>📞 +265 999 123 456</li>
+              <li>🕒 Mon-Fri: 8AM - 6PM</li>
+            </ul>
+          </div>
         </div>
-        <div class="social-icons">
-          <div class="social-icon" title="Phone">📱</div>
-          <div class="social-icon" title="Email">📧</div>
-          <div class="social-icon" title="Website">🌐</div>
+
+        <!-- Footer Bottom -->
+        <div class="footer-bottom">
+          <p>&copy; 2025 SHOP EASY. All rights reserved.</p>
+          <div class="footer-bottom-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Cookie Policy</a>
+            <a href="#">Sitemap</a>
+          </div>
         </div>
       </div>
     </footer>

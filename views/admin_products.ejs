@@ -7,9 +7,8 @@
 
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-..." crossorigin="anonymous" referrerpolicy="no-referrer" />
-<link rel="stylesheet" href="/css/admnProducts.css">
+  <link rel="stylesheet" href="/css/admnProducts.css">
   <style>
-   
   </style>
 </head>
 <body>
@@ -19,7 +18,7 @@
       <div class="brand">
         <span class="logo" aria-hidden="true"></span>
         <div>
-          <div class="title">MyShop Admin <span class="pro">PRO</span></div>
+          <div class="title">EASY SHOP Admin <span class="pro"></span></div>
           <div class="muted" style="font-size:0.85rem;margin-top:4px">Manage your store</div>
         </div>
       </div>
@@ -32,7 +31,7 @@
       </nav>
 
       <div class="sidebar-footer">
-        © <span id="year"></span> Your Company
+        © <span id="year"></span> EASY SHOP
       </div>
     </aside>
 
@@ -44,7 +43,7 @@
             <i class="fa-solid fa-bars"></i>
           </button>
           <div class="heading">
-            <div class="brand">MyShop Admin</div>
+            <div class="brand">EASY SHOP Admin</div>
             <div class="subtitle muted">Products</div>
           </div>
         </div>
@@ -66,7 +65,8 @@
               <div class="muted" style="font-size:0.9rem">Manage inventory</div>
             </div>
             <div>
-              <a href="/admin/products/new" class="add-btn">Add product</a>
+              <a href="/admin/products/admin_add_product" class="add-btn">Add product</a>
+              <!-- <a href="/admin/products/new" class="add-btn">Add product</a> -->
             </div>
           </div>
 
@@ -75,6 +75,7 @@
               <thead>
                 <tr>
                   <th>ID</th>
+                  <th>Image</th>
                   <th>Name</th>
                   <th>Price</th>
                   <th>Qty</th>
@@ -84,14 +85,16 @@
               </thead>
               <tbody>
                 <% products.forEach(p => { %>
-                <tr>
+                <tr data-product-id="<%= p.id %>">
                   <td><%= p.id %></td>
+                  <td>
+                    <img src="/uploads/<%= p.image %>" alt="<%= p.name %>" style="width:50px;height:50px;object-fit:cover;border-radius:4px;" onerror="this.src='/images/placeholder.png'">
+                  </td>
                   <td><%= p.name %></td>
-                  <td>$<%= p.price %></td>
+                  <td>MK<%= p.price %></td>
                   <td><%= p.quantity %></td>
                   <td><%= p.seller_email %></td>
                   <td class="actions">
-                    <!-- data- attributes used to avoid inline JS escaping issues -->
                     <button
                       class="edit-btn"
                       type="button"
@@ -99,6 +102,8 @@
                       data-name="<%= p.name %>"
                       data-price="<%= p.price %>"
                       data-quantity="<%= p.quantity %>"
+                      data-image="<%= p.image %>"
+                      data-seller-id="<%= p.seller_id %>"
                       data-seller-email="<%= p.seller_email %>"
                     >
                       Edit
@@ -123,29 +128,56 @@
     </div>
   </div>
 
+  <!-- Notification Toast -->
+  <div id="notification" class="notification">
+    <span id="notificationMessage"></span>
+  </div>
+
   <!-- EDIT MODAL -->
   <div id="editBackdrop" class="modal-backdrop" aria-hidden="true" role="dialog" aria-modal="true">
     <div class="modal" role="document" aria-labelledby="editTitle">
       <h3 id="editTitle">Edit Product</h3>
-      <form id="editForm" method="POST" action="">
+      <form id="editForm" enctype="multipart/form-data">
         <div class="grid">
-          <div>
+          <div style="grid-column: 1 / -1;">
             <label for="editName">Product Name</label>
             <input id="editName" name="name" type="text" required />
           </div>
+          
           <div>
-            <label for="editPrice">Price</label>
+            <label for="editPrice">Price (MK)</label>
             <input id="editPrice" name="price" type="number" step="0.01" required />
           </div>
+          
           <div>
             <label for="editQuantity">Quantity</label>
             <input id="editQuantity" name="quantity" type="number" required />
           </div>
-          <div>
-            <label for="editSeller">Seller Email</label>
-            <input id="editSeller" name="seller_email" type="email" required />
+          
+          <div style="grid-column: 1 / -1;">
+            <label>Product Image</label>
+            <div class="image-upload-options">
+              <label>
+                <input type="radio" name="imageType" value="upload" checked />
+                Upload from PC
+              </label>
+              <label>
+                <input type="radio" name="imageType" value="url" />
+                Use Image URL
+              </label>
+            </div>
+            
+            <input id="editImageFile" name="image" type="file" accept="image/*" />
+            <input id="editImageUrl" name="imageUrl" type="url" class="image-url-input" placeholder="https://example.com/image.jpg" />
+            
+            <div class="image-preview-container" id="editImagePreviewContainer">
+              <p style="font-size:0.9rem;color:#64748b;margin-bottom:8px">Current Image:</p>
+              <img id="editImagePreview" class="image-preview" src="" alt="Product preview" />
+            </div>
           </div>
         </div>
+
+        <input type="hidden" id="editProductId" name="productId" />
 
         <div class="modal-actions">
           <button type="button" class="btn btn-cancel" id="editCancel">Cancel</button>
@@ -162,16 +194,14 @@
       <p id="deleteMsg" style="color:#475569;margin-top:6px">Are you sure you want to delete this product?</p>
 
       <div class="modal-actions" style="margin-top:16px;">
-        <form id="deleteForm" method="POST" action="">
-          <button type="button" class="btn btn-cancel" id="deleteCancel">Cancel</button>
-          <button type="submit" class="btn btn-danger">Yes, delete</button>
-        </form>
+        <button type="button" class="btn btn-cancel" id="deleteCancel">Cancel</button>
+        <button type="button" class="btn btn-danger" id="deleteConfirm">Yes, delete</button>
       </div>
     </div>
   </div>
 
   <script>
-    // fill year
+    // Fill year
     document.getElementById('year').textContent = new Date().getFullYear();
 
     // Mobile sidebar toggle
@@ -211,15 +241,26 @@
 
     searchInput.addEventListener('input', () => {
       const query = searchInput.value.toLowerCase();
-
       tableRows.forEach(row => {
         const rowText = row.textContent.toLowerCase();
         row.style.display = rowText.includes(query) ? '' : 'none';
       });
     });
-  </script>
 
-  <script>
+    // Notification system
+    function showNotification(message, type = 'success') {
+      const notification = document.getElementById('notification');
+      const messageEl = document.getElementById('notificationMessage');
+      
+      messageEl.textContent = message;
+      notification.className = `notification ${type}`;
+      notification.style.display = 'block';
+      
+      setTimeout(() => {
+        notification.style.display = 'none';
+      }, 3000);
+    }
+
     // Modal elements
     const editBackdrop = document.getElementById('editBackdrop');
     const deleteBackdrop = document.getElementById('deleteBackdrop');
@@ -228,48 +269,134 @@
     const editName = document.getElementById('editName');
     const editPrice = document.getElementById('editPrice');
     const editQuantity = document.getElementById('editQuantity');
-    const editSeller = document.getElementById('editSeller');
+    const editImageFile = document.getElementById('editImageFile');
+    const editImageUrl = document.getElementById('editImageUrl');
+    const editImagePreview = document.getElementById('editImagePreview');
+    const editImagePreviewContainer = document.getElementById('editImagePreviewContainer');
+    const editProductId = document.getElementById('editProductId');
     const editCancel = document.getElementById('editCancel');
 
-    const deleteForm = document.getElementById('deleteForm');
     const deleteMsg = document.getElementById('deleteMsg');
     const deleteCancel = document.getElementById('deleteCancel');
+    const deleteConfirm = document.getElementById('deleteConfirm');
 
-    // Helpers to open/close
+    let currentDeleteId = null;
+
+    // Image upload type toggle
+    const imageTypeRadios = document.querySelectorAll('input[name="imageType"]');
+    imageTypeRadios.forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        if (e.target.value === 'upload') {
+          editImageFile.style.display = 'block';
+          editImageUrl.style.display = 'none';
+          editImageUrl.removeAttribute('required');
+          editImageFile.removeAttribute('disabled');
+        } else {
+          editImageFile.style.display = 'none';
+          editImageUrl.style.display = 'block';
+          editImageFile.setAttribute('disabled', 'disabled');
+        }
+      });
+    });
+
+    // Preview uploaded image
+    editImageFile.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          editImagePreview.src = event.target.result;
+          editImagePreviewContainer.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Preview URL image
+    editImageUrl.addEventListener('input', (e) => {
+      const url = e.target.value;
+      if (url) {
+        editImagePreview.src = url;
+        editImagePreviewContainer.style.display = 'block';
+      }
+    });
+
+    // Helpers to open/close modals
     function showModal(backdrop) {
       backdrop.style.display = 'flex';
       backdrop.setAttribute('aria-hidden', 'false');
-      // trap focus to the modal - simple approach: focus the first focusable element
       const first = backdrop.querySelector('input, button, [tabindex="0"]');
       if (first) first.focus();
       document.body.style.overflow = 'hidden';
     }
+    
     function hideModal(backdrop) {
       backdrop.style.display = 'none';
       backdrop.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
     }
 
-    // Attach click listeners to edit buttons
+    // Edit button handlers
     document.querySelectorAll('.edit-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.dataset.id;
         const name = btn.dataset.name || '';
         const price = btn.dataset.price || '';
         const quantity = btn.dataset.quantity || '';
-        const sellerEmail = btn.dataset.sellerEmail || '';
+        const image = btn.dataset.image || '';
 
-        // Fill form fields
         editName.value = name;
         editPrice.value = price;
         editQuantity.value = quantity;
-        editSeller.value = sellerEmail;
+        editProductId.value = id;
 
-        // Set action for POST /admin/products/edit/:id
-        editForm.action = `/admin/products/edit/${id}`;
+        // Show current image
+        if (image) {
+          editImagePreview.src = `/uploads/${image}`;
+          editImagePreviewContainer.style.display = 'block';
+        }
+
+        // Reset image upload options
+        document.querySelector('input[name="imageType"][value="upload"]').checked = true;
+        editImageFile.style.display = 'block';
+        editImageUrl.style.display = 'none';
+        editImageFile.value = '';
+        editImageUrl.value = '';
 
         showModal(editBackdrop);
       });
+    });
+
+    // Edit form submission
+    editForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(editForm);
+      const productId = editProductId.value;
+      
+      try {
+        const response = await fetch(`/admin/products/edit/${productId}`, {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          showNotification('Product updated successfully!', 'success');
+          hideModal(editBackdrop);
+          
+          // Reload page to show updated data
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } else {
+          showNotification(result.error || 'Failed to update product', 'error');
+        }
+      } catch (error) {
+        showNotification('Error updating product', 'error');
+        console.error('Error:', error);
+      }
     });
 
     // Edit modal cancel/overlay handlers
@@ -278,37 +405,72 @@
       if (e.target === editBackdrop) hideModal(editBackdrop);
     });
 
-    // Attach click listeners to delete buttons
+    // Delete button handlers
     document.querySelectorAll('.delete-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const id = btn.dataset.id;
+        currentDeleteId = btn.dataset.id;
         const name = btn.dataset.name || 'this product';
-
-        // Update confirmation message
         deleteMsg.textContent = `Are you sure you want to permanently delete "${name}"? This action cannot be undone.`;
-
-        // Set delete form action
-        deleteForm.action = `/admin/products/delete/${id}`;
-
         showModal(deleteBackdrop);
       });
     });
 
+    // Delete confirmation handler
+    deleteConfirm.addEventListener('click', async () => {
+      if (!currentDeleteId) return;
+
+      try {
+        const response = await fetch(`/admin/products/delete/${currentDeleteId}`, {
+          method: 'POST'
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          showNotification('Product deleted successfully!', 'success');
+          hideModal(deleteBackdrop);
+          
+          // Remove the row from table
+          const row = document.querySelector(`tr[data-product-id="${currentDeleteId}"]`);
+          if (row) {
+            row.style.transition = 'opacity 0.3s ease';
+            row.style.opacity = '0';
+            setTimeout(() => row.remove(), 300);
+          }
+          
+          currentDeleteId = null;
+        } else {
+          showNotification(result.error || 'Failed to delete product', 'error');
+        }
+      } catch (error) {
+        showNotification('Error deleting product', 'error');
+        console.error('Error:', error);
+      }
+    });
+
     // Delete cancel/overlay handlers
-    deleteCancel.addEventListener('click', () => hideModal(deleteBackdrop));
+    deleteCancel.addEventListener('click', () => {
+      hideModal(deleteBackdrop);
+      currentDeleteId = null;
+    });
+    
     deleteBackdrop.addEventListener('click', (e) => {
-      if (e.target === deleteBackdrop) hideModal(deleteBackdrop);
+      if (e.target === deleteBackdrop) {
+        hideModal(deleteBackdrop);
+        currentDeleteId = null;
+      }
     });
 
     // Close modals with Escape key
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         if (editBackdrop.style.display === 'flex') hideModal(editBackdrop);
-        if (deleteBackdrop.style.display === 'flex') hideModal(deleteBackdrop);
+        if (deleteBackdrop.style.display === 'flex') {
+          hideModal(deleteBackdrop);
+          currentDeleteId = null;
+        }
       }
     });
-
   </script>
-
 </body>
 </html>

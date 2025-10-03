@@ -3,6 +3,9 @@ const app = express();
 const mysql2 = require("mysql2");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
@@ -25,6 +28,37 @@ app.use(
     saveUninitialized: false,
   })
 );
+
+// Configure multer for image uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, 'public/uploads');
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: function (req, file, cb) {
+    const filetypes = /jpeg|jpg|png|gif|webp/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Only image files are allowed!'));
+  }
+});
 
 // Middleware to check roles
 function requireRole(role) {
@@ -169,13 +203,14 @@ app.get("/admin/dashboard", requireRole("admin"), async (req, res) => {
 
     const [recentOrders] = await pool.promise().query(`
         SELECT o.id, o.total, o.status,
-               u.name AS customer
+               COALESCE(u.name, 'Guest') AS customer
         FROM orders o
         LEFT JOIN users u ON o.customer_id = u.id
         ORDER BY o.id DESC
         LIMIT 10
       `);
 
+<<<<<<< HEAD
     const months = [
       "Jan",
       "Feb",
@@ -196,6 +231,65 @@ app.get("/admin/dashboard", requireRole("admin"), async (req, res) => {
         1200, 1900, 3000, 5000, 2300, 3200, 4100, 3800, 4500, 5200, 6000, 7200,
       ],
       customerSeries: [45, 52, 49, 60, 58, 65, 70, 68, 75, 80, 85, 90],
+=======
+    // Calculate sales by month for the last 12 months
+    const [monthlySales] = await pool
+      .promise()
+      .query(`
+        SELECT 
+          DATE_FORMAT(created_at, '%b') as month,
+          YEAR(created_at) as year,
+          MONTH(created_at) as month_num,
+          COALESCE(SUM(total), 0) as total
+        FROM orders
+        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+        GROUP BY YEAR(created_at), MONTH(created_at), DATE_FORMAT(created_at, '%b')
+        ORDER BY YEAR(created_at), MONTH(created_at)
+      `);
+
+    // Calculate customer growth by month for the last 12 months
+    const [monthlyCustomers] = await pool
+      .promise()
+      .query(`
+        SELECT 
+          DATE_FORMAT(created_at, '%b') as month,
+          YEAR(created_at) as year,
+          MONTH(created_at) as month_num,
+          COUNT(*) as count
+        FROM users
+        WHERE role = 'customer' AND created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+        GROUP BY YEAR(created_at), MONTH(created_at), DATE_FORMAT(created_at, '%b')
+        ORDER BY YEAR(created_at), MONTH(created_at)
+      `);
+
+    // Prepare chart data for last 12 months
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentMonth = new Date().getMonth();
+    
+    // Create ordered array of last 12 months
+    const last12Months = [];
+    for (let i = 0; i < 12; i++) {
+      const monthIndex = (currentMonth - 11 + i + 12) % 12;
+      last12Months.push(months[monthIndex]);
+    }
+
+    // Map sales data to last 12 months
+    const salesSeries = last12Months.map(month => {
+      const data = monthlySales.find(m => m.month === month);
+      return data ? parseFloat(data.total) : 0;
+    });
+
+    // Map customer data to last 12 months
+    const customerSeries = last12Months.map(month => {
+      const data = monthlyCustomers.find(m => m.month === month);
+      return data ? parseInt(data.count) : 0;
+    });
+
+    const charts = {
+      labels: last12Months,
+      salesSeries: salesSeries,
+      customerSeries: customerSeries
+>>>>>>> 06104463bc5d655a40e6f7382ede49c745fea1e2
     };
 
     const cards = {
@@ -228,13 +322,112 @@ app.get("/admin/products", requireRole("admin"), (req, res) => {
      FROM products p 
      LEFT JOIN users u ON p.seller_id=u.id`,
     (err, results) => {
-      if (err) return res.send("Error fetching products");
+      if (err) {
+        console.error("Error fetching products:", err);
+        return res.send("Error fetching products: " + err.message);
+      }
       res.render("admin_products", {
         products: results,
         user: req.session.user,
       });
     }
   );
+});
+
+// Admin Edit Product (POST) - with image upload
+app.post('/admin/products/edit/:id', requireRole('admin'), upload.single('image'), async (req, res) => {
+  try {
+    const productId = req.params.id;
+    const { name, price, quantity, imageUrl } = req.body;
+    
+    let imagePath;
+    
+    // Get current product to check existing image
+    const [currentProduct] = await pool.promise().query(
+      'SELECT image FROM products WHERE id = ?', 
+      [productId]
+    );
+    
+    // Determine which image to use
+    const imageType = req.body.imageType || 'upload';
+    
+    if (imageType === 'url' && imageUrl && imageUrl.trim() !== '') {
+      // Using URL - extract just the filename or use full URL
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        // It's a full URL, store just the filename part
+        imagePath = imageUrl.split('/').pop();
+      } else {
+        imagePath = imageUrl;
+      }
+    } else if (req.file) {
+      // New file uploaded
+      imagePath = req.file.filename;
+      
+      // Delete old image file if it exists and is a local file
+      if (currentProduct[0] && currentProduct[0].image) {
+        const oldImagePath = path.join(__dirname, 'public/uploads', currentProduct[0].image);
+        if (fs.existsSync(oldImagePath)) {
+          try {
+            fs.unlinkSync(oldImagePath);
+          } catch (err) {
+            console.error('Error deleting old image:', err);
+          }
+        }
+      }
+    } else {
+      // Keep existing image
+      imagePath = currentProduct[0].image;
+    }
+    
+    // Update product in database
+    await pool.promise().query(
+      'UPDATE products SET name = ?, price = ?, quantity = ?, image = ? WHERE id = ?',
+      [name, price, quantity, imagePath, productId]
+    );
+    
+    res.json({ success: true, message: 'Product updated successfully' });
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({ error: 'Failed to update product: ' + error.message });
+  }
+});
+
+// Admin Delete Product (POST) - AJAX version
+app.post('/admin/products/delete/:id', requireRole('admin'), async (req, res) => {
+  try {
+    const productId = req.params.id;
+    
+    // Get product info before deleting
+    const [product] = await pool.promise().query(
+      'SELECT image FROM products WHERE id = ?', 
+      [productId]
+    );
+    
+    if (product.length === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    // Delete the product from database
+    await pool.promise().query('DELETE FROM products WHERE id = ?', [productId]);
+    
+    // Delete associated image file if it exists
+    if (product[0].image) {
+      const imagePath = path.join(__dirname, 'public/uploads', product[0].image);
+      if (fs.existsSync(imagePath)) {
+        try {
+          fs.unlinkSync(imagePath);
+        } catch (err) {
+          console.error('Error deleting image file:', err);
+          // Don't fail the request if image deletion fails
+        }
+      }
+    }
+    
+    res.json({ success: true, message: 'Product deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    res.status(500).json({ error: 'Failed to delete product: ' + error.message });
+  }
 });
 
 app.get("/admin/orders", requireRole("admin"), (req, res) => {
@@ -247,8 +440,15 @@ app.get("/admin/orders", requireRole("admin"), (req, res) => {
   });
 });
 
+<<<<<<< HEAD
 app.get("/admin/users", requireRole("admin"), async (req, res) => {
   try {
+=======
+// Admin Manage Users
+app.get("/admin/users", requireRole("admin"), async (req, res) => {
+  try {
+    // Get all users
+>>>>>>> 06104463bc5d655a40e6f7382ede49c745fea1e2
     const [users] = await pool
       .promise()
       .query("SELECT id, name, email, role FROM users ORDER BY id DESC");
@@ -309,6 +509,54 @@ app.post("/admin/users/add", requireRole("admin"), async (req, res) => {
   }
 });
 
+<<<<<<< HEAD
+=======
+// Admin Edit User (POST)
+app.post("/admin/users/edit", requireRole("admin"), async (req, res) => {
+  const { user_id, name, email, role, password } = req.body;
+
+  if (!user_id || !name || !email || !role) {
+    return res.redirect("/admin/users?error=All fields except password are required");
+  }
+
+  try {
+    // Check if email already exists for another user
+    const [existing] = await pool
+      .promise()
+      .query("SELECT * FROM users WHERE email = ? AND id != ?", [email, user_id]);
+    
+    if (existing.length > 0) {
+      return res.redirect("/admin/users?error=Email already exists");
+    }
+
+    // If password is provided, hash it and update with password
+    if (password && password.trim() !== '') {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await pool
+        .promise()
+        .query(
+          "UPDATE users SET name = ?, email = ?, role = ?, password = ? WHERE id = ?",
+          [name, email, role, hashedPassword, user_id]
+        );
+    } else {
+      // Update without changing password
+      await pool
+        .promise()
+        .query(
+          "UPDATE users SET name = ?, email = ?, role = ? WHERE id = ?",
+          [name, email, role, user_id]
+        );
+    }
+
+    res.redirect("/admin/users?success=User updated successfully");
+  } catch (err) {
+    console.error("Error updating user:", err);
+    res.redirect("/admin/users?error=" + err.message);
+  }
+});
+
+// Admin Delete User (POST)
+>>>>>>> 06104463bc5d655a40e6f7382ede49c745fea1e2
 app.post("/admin/users/delete", requireRole("admin"), async (req, res) => {
   const { user_id } = req.body;
 
@@ -340,19 +588,33 @@ app.get(
   }
 );
 
+<<<<<<< HEAD
+=======
+// Admin Add Product POST - Updated with image upload
+>>>>>>> 06104463bc5d655a40e6f7382ede49c745fea1e2
 app.post(
   "/admin/products/admin_add_product",
   requireRole("admin"),
+  upload.single('image'),
   (req, res) => {
-    const { name, price, quantity, seller_id, image } = req.body;
+    const { name, price, quantity, seller_id, imageUrl } = req.body;
 
     if (!name || !price || !quantity || !seller_id) {
       return res.send("Name, price, quantity, and seller are required");
     }
 
+    let imagePath = null;
+    
+    // Check if file was uploaded or URL provided
+    if (req.file) {
+      imagePath = req.file.filename;
+    } else if (imageUrl && imageUrl.trim() !== '') {
+      imagePath = imageUrl.split('/').pop(); // Get filename from URL
+    }
+
     pool.query(
       "INSERT INTO products (name, price, quantity, seller_id, image) VALUES (?, ?, ?, ?, ?)",
-      [name, price, quantity, seller_id, image || null],
+      [name, price, quantity, seller_id, imagePath],
       (err) => {
         if (err) return res.send("Error adding product: " + err.message);
         res.redirect("/admin/products");
@@ -361,6 +623,104 @@ app.post(
   }
 );
 
+<<<<<<< HEAD
+=======
+// SELLER ROUTES
+
+app.get("/seller/dashboard", requireRole("seller"), (req, res) => {
+  res.render("seller_dashboard", { user: req.session.user });
+});
+
+app.get("/seller/products", requireRole("seller"), (req, res) => {
+  pool.query(
+    "SELECT * FROM products WHERE seller_id=?",
+    [req.session.user.id],
+    (err, results) => {
+      if (err) return res.send("Error fetching products");
+      res.render("seller_products", {
+        products: results,
+        user: req.session.user,
+      });
+    }
+  );
+});
+
+// Seller Add Product GET
+app.get("/seller/products/add", requireRole("seller"), (req, res) => {
+  res.render("seller_add_product", { user: req.session.user });
+});
+
+// Seller Add Product POST - Updated with image upload
+app.post("/seller/products/add", requireRole("seller"), upload.single('image'), (req, res) => {
+  const { name, price, quantity, imageUrl } = req.body;
+  const seller_id = req.session.user.id;
+
+  if (!name || !price || !quantity) {
+    return res.send("Name, price, and quantity are required");
+  }
+
+  let imagePath = null;
+  
+  if (req.file) {
+    imagePath = req.file.filename;
+  } else if (imageUrl && imageUrl.trim() !== '') {
+    imagePath = imageUrl.split('/').pop();
+  }
+
+  pool.query(
+    "INSERT INTO products (name, price, quantity, seller_id, image) VALUES (?, ?, ?, ?, ?)",
+    [name, price, quantity, seller_id, imagePath],
+    (err) => {
+      if (err) return res.send("Error adding product: " + err.message);
+      res.redirect("/seller/products");
+    }
+  );
+});
+
+// Seller Orders
+app.get("/seller/orders", requireRole("seller"), (req, res) => {
+  const sellerId = req.session.user.id;
+
+  pool.query(
+    `SELECT o.id AS order_id, o.total, o.status, 
+            oi.product_id, oi.quantity, oi.price, p.name
+     FROM orders o
+     JOIN order_items oi ON o.id = oi.order_id
+     JOIN products p ON oi.product_id = p.id
+     WHERE p.seller_id = ?`,
+    [sellerId],
+    (err, results) => {
+      if (err) return res.send("Error fetching orders: " + err.message);
+
+      const orders = {};
+      results.forEach((row) => {
+        if (!orders[row.order_id]) {
+          orders[row.order_id] = {
+            id: row.order_id,
+            total: row.total,
+            status: row.status,
+            items: [],
+          };
+        }
+        orders[row.order_id].items.push({
+          product_id: row.product_id,
+          name: row.name,
+          quantity: row.quantity,
+          price: row.price,
+        });
+      });
+
+      res.render("seller_orders", {
+        orders: Object.values(orders),
+        user: req.session.user,
+      });
+    }
+  );
+});
+
+// CUSTOMER ROUTES
+
+>>>>>>> 06104463bc5d655a40e6f7382ede49c745fea1e2
 // Customer Dashboard
 app.get("/customer/dashboard", requireRole("customer"), async (req, res) => {
   try {
