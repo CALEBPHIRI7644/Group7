@@ -14,7 +14,6 @@ const pool = mysql2.createPool({
   host: "localhost",
   user: "root",
   database: "shopping",
-  //password: "abcabc12345Abdul",
   password: "",
 });
 
@@ -130,53 +129,44 @@ app.get("/logout", (req, res) => {
 });
 
 // ADMIN ROUTES
-
 app.get("/admin/dashboard", requireRole("admin"), async (req, res) => {
   try {
-    // Get total sales
     const [salesResult] = await pool
       .promise()
       .query("SELECT COALESCE(SUM(total), 0) AS totalSales FROM orders");
 
-    // Get total orders
     const [ordersResult] = await pool
       .promise()
       .query("SELECT COUNT(*) AS totalOrders FROM orders");
 
-    // Get pending orders
     const [pendingResult] = await pool
       .promise()
       .query(
         "SELECT COUNT(*) AS pendingOrders FROM orders WHERE status = 'Pending'"
       );
 
-    // Get delivered orders
     const [deliveredResult] = await pool
       .promise()
       .query(
         "SELECT COUNT(*) AS deliveredOrders FROM orders WHERE status = 'Delivered'"
       );
 
-    // Get total products
     const [productsResult] = await pool
       .promise()
       .query("SELECT COUNT(*) AS totalProducts FROM products");
 
-    // Get total customers
     const [customersResult] = await pool
       .promise()
       .query(
         "SELECT COUNT(*) AS totalCustomers FROM users WHERE role = 'customer'"
       );
 
-    // Get total sellers
     const [sellersResult] = await pool
       .promise()
       .query(
         "SELECT COUNT(*) AS totalSellers FROM users WHERE role = 'seller'"
       );
 
-    // Get recent orders with customer info
     const [recentOrders] = await pool.promise().query(`
         SELECT o.id, o.total, o.status,
                u.name AS customer
@@ -186,7 +176,6 @@ app.get("/admin/dashboard", requireRole("admin"), async (req, res) => {
         LIMIT 10
       `);
 
-    // Prepare chart data (last 12 months - dummy data for now, you can calculate real data)
     const months = [
       "Jan",
       "Feb",
@@ -258,15 +247,12 @@ app.get("/admin/orders", requireRole("admin"), (req, res) => {
   });
 });
 
-// Admin Manage Users - FIXED: removed created_at column
 app.get("/admin/users", requireRole("admin"), async (req, res) => {
   try {
-    // Get all users (removed created_at since it doesn't exist in the table)
     const [users] = await pool
       .promise()
       .query("SELECT id, name, email, role FROM users ORDER BY id DESC");
 
-    // Get user counts by role
     const [customerCount] = await pool
       .promise()
       .query("SELECT COUNT(*) AS count FROM users WHERE role = 'customer'");
@@ -292,7 +278,6 @@ app.get("/admin/users", requireRole("admin"), async (req, res) => {
   }
 });
 
-// Admin Add User (POST)
 app.post("/admin/users/add", requireRole("admin"), async (req, res) => {
   const { name, email, password, role } = req.body;
 
@@ -301,7 +286,6 @@ app.post("/admin/users/add", requireRole("admin"), async (req, res) => {
   }
 
   try {
-    // Check if email already exists
     const [existing] = await pool
       .promise()
       .query("SELECT * FROM users WHERE email = ?", [email]);
@@ -325,13 +309,11 @@ app.post("/admin/users/add", requireRole("admin"), async (req, res) => {
   }
 });
 
-// Admin Delete User (POST)
 app.post("/admin/users/delete", requireRole("admin"), async (req, res) => {
   const { user_id } = req.body;
 
   try {
     await pool.promise().query("DELETE FROM users WHERE id = ?", [user_id]);
-
     res.redirect("/admin/users?success=User deleted successfully");
   } catch (err) {
     console.error("Error deleting user:", err);
@@ -339,7 +321,6 @@ app.post("/admin/users/delete", requireRole("admin"), async (req, res) => {
   }
 });
 
-// Admin Add Product GET
 app.get(
   "/admin/products/admin_add_product",
   requireRole("admin"),
@@ -359,7 +340,6 @@ app.get(
   }
 );
 
-// Admin Add Product POST
 app.post(
   "/admin/products/admin_add_product",
   requireRole("admin"),
@@ -381,12 +361,11 @@ app.post(
   }
 );
 
-// Customer Dashboard - CORRECTED WITH ALL REQUIRED VARIABLES
+// Customer Dashboard
 app.get("/customer/dashboard", requireRole("customer"), async (req, res) => {
   try {
     const customerId = req.session.user.id;
 
-    // Get order statistics
     const [orders] = await pool
       .promise()
       .query("SELECT * FROM orders WHERE customer_id = ?", [customerId]);
@@ -401,12 +380,10 @@ app.get("/customer/dashboard", requireRole("customer"), async (req, res) => {
       0
     );
 
-    // Get some featured products
     const [products] = await pool
       .promise()
       .query("SELECT * FROM products WHERE quantity > 0 LIMIT 8");
 
-    // Check for saved cart
     const [savedCart] = await pool
       .promise()
       .query("SELECT * FROM saved_carts WHERE customer_id = ?", [customerId]);
@@ -431,7 +408,7 @@ app.get("/customer/dashboard", requireRole("customer"), async (req, res) => {
   }
 });
 
-// Browse Products with Search and Filters
+// Browse Products with Search and Filters - FIXED IMAGE HANDLING
 app.get("/customer/browse", requireRole("customer"), async (req, res) => {
   try {
     const searchQuery = req.query.search || "";
@@ -439,7 +416,8 @@ app.get("/customer/browse", requireRole("customer"), async (req, res) => {
     const minPrice = parseFloat(req.query.min_price) || 0;
     const maxPrice = parseFloat(req.query.max_price) || 999999;
 
-    let query = "SELECT * FROM products WHERE quantity > 0";
+    let query =
+      "SELECT id, name, price, quantity, image, seller_id FROM products WHERE quantity > 0";
     const params = [];
 
     if (searchQuery) {
@@ -468,6 +446,9 @@ app.get("/customer/browse", requireRole("customer"), async (req, res) => {
 
     const [products] = await pool.promise().query(query, params);
 
+    // Log products to debug
+    console.log("Products fetched:", products);
+
     const [savedCart] = await pool
       .promise()
       .query("SELECT * FROM saved_carts WHERE customer_id = ?", [
@@ -490,7 +471,7 @@ app.get("/customer/browse", requireRole("customer"), async (req, res) => {
   }
 });
 
-// Quick search API endpoint (for autocomplete)
+// Quick search API endpoint
 app.get("/api/search", requireRole("customer"), async (req, res) => {
   try {
     const query = req.query.q || "";
@@ -554,7 +535,6 @@ app.get("/customer/cart", requireRole("customer"), async (req, res) => {
   }
 });
 
-// Save current cart to database
 app.post("/customer/cart/save", requireRole("customer"), async (req, res) => {
   if (!req.session.cart || req.session.cart.length === 0) {
     return res.redirect("/customer/cart?message=Cart is empty");
@@ -591,7 +571,6 @@ app.post("/customer/cart/save", requireRole("customer"), async (req, res) => {
   }
 });
 
-// Load saved cart
 app.post("/customer/cart/load", requireRole("customer"), async (req, res) => {
   try {
     const customerId = req.session.user.id;
@@ -614,7 +593,6 @@ app.post("/customer/cart/load", requireRole("customer"), async (req, res) => {
   }
 });
 
-// Delete saved cart
 app.post(
   "/customer/cart/delete-saved",
   requireRole("customer"),
@@ -634,7 +612,6 @@ app.post(
   }
 );
 
-// Add to Cart
 app.post("/customer/cart/add", requireRole("customer"), (req, res) => {
   const { product_id, quantity } = req.body;
   if (!req.session.cart) req.session.cart = [];
@@ -654,7 +631,6 @@ app.post("/customer/cart/add", requireRole("customer"), (req, res) => {
   res.redirect("/customer/cart");
 });
 
-// Remove from Cart
 app.post("/customer/cart/remove", requireRole("customer"), (req, res) => {
   const { product_id } = req.body;
   if (!req.session.cart) req.session.cart = [];
@@ -666,7 +642,6 @@ app.post("/customer/cart/remove", requireRole("customer"), (req, res) => {
   res.redirect("/customer/cart");
 });
 
-// Update Cart Quantity
 app.post("/customer/cart/update", requireRole("customer"), (req, res) => {
   const { product_id, quantity } = req.body;
   if (!req.session.cart) req.session.cart = [];
@@ -681,7 +656,6 @@ app.post("/customer/cart/update", requireRole("customer"), (req, res) => {
   res.redirect("/customer/cart");
 });
 
-// Checkout
 app.post(
   "/customer/cart/checkout",
   requireRole("customer"),
@@ -749,7 +723,6 @@ app.post(
   }
 );
 
-// Customer Orders
 app.get("/customer/orders", requireRole("customer"), (req, res) => {
   const customerId = req.session.user.id;
   const message = req.query.message || null;
@@ -793,7 +766,6 @@ app.get("/customer/orders", requireRole("customer"), (req, res) => {
   );
 });
 
-// Cancel Order
 app.post(
   "/customer/orders/cancel",
   requireRole("customer"),
@@ -821,24 +793,17 @@ app.post(
   }
 );
 
-// ADD THESE ROUTES TO YOUR EXISTING app.js FILE
-// Replace the existing seller routes section with these updated routes
-
-// ============= SELLER ROUTES =============
-
-// Seller Dashboard with Statistics
+// SELLER ROUTES
 app.get("/seller/dashboard", requireRole("seller"), async (req, res) => {
   try {
     const sellerId = req.session.user.id;
 
-    // Get total products count
     const [productsCount] = await pool
       .promise()
       .query("SELECT COUNT(*) AS count FROM products WHERE seller_id = ?", [
         sellerId,
       ]);
 
-    // Get total orders containing seller's products
     const [ordersCount] = await pool.promise().query(
       `SELECT COUNT(DISTINCT o.id) AS count 
        FROM orders o
@@ -848,7 +813,6 @@ app.get("/seller/dashboard", requireRole("seller"), async (req, res) => {
       [sellerId]
     );
 
-    // Get pending orders
     const [pendingCount] = await pool.promise().query(
       `SELECT COUNT(DISTINCT o.id) AS count 
        FROM orders o
@@ -858,7 +822,6 @@ app.get("/seller/dashboard", requireRole("seller"), async (req, res) => {
       [sellerId]
     );
 
-    // Get total revenue
     const [revenueResult] = await pool.promise().query(
       `SELECT COALESCE(SUM(oi.price * oi.quantity), 0) AS revenue
        FROM order_items oi
@@ -884,7 +847,6 @@ app.get("/seller/dashboard", requireRole("seller"), async (req, res) => {
   }
 });
 
-// Seller Products List
 app.get("/seller/products", requireRole("seller"), (req, res) => {
   pool.query(
     "SELECT * FROM products WHERE seller_id=? ORDER BY id DESC",
@@ -899,12 +861,10 @@ app.get("/seller/products", requireRole("seller"), (req, res) => {
   );
 });
 
-// Seller Add Product GET
 app.get("/seller/products/add", requireRole("seller"), (req, res) => {
   res.render("seller_add_product", { user: req.session.user });
 });
 
-// Seller Add Product POST
 app.post("/seller/products/add", requireRole("seller"), (req, res) => {
   const { name, price, quantity, image } = req.body;
   const seller_id = req.session.user.id;
@@ -923,7 +883,6 @@ app.post("/seller/products/add", requireRole("seller"), (req, res) => {
   );
 });
 
-// Seller Edit Product GET
 app.get(
   "/seller/products/edit/:id",
   requireRole("seller"),
@@ -950,7 +909,6 @@ app.get(
   }
 );
 
-// Seller Edit Product POST
 app.post(
   "/seller/products/edit/:id",
   requireRole("seller"),
@@ -979,7 +937,6 @@ app.post(
   }
 );
 
-// Seller Delete Product POST
 app.post("/seller/products/delete", requireRole("seller"), async (req, res) => {
   const { product_id } = req.body;
 
@@ -997,7 +954,6 @@ app.post("/seller/products/delete", requireRole("seller"), async (req, res) => {
   }
 });
 
-// Seller Orders - View all orders containing their products
 app.get("/seller/orders", requireRole("seller"), async (req, res) => {
   const sellerId = req.session.user.id;
   const message = req.query.message || null;
@@ -1005,7 +961,7 @@ app.get("/seller/orders", requireRole("seller"), async (req, res) => {
   try {
     const [results] = await pool.promise().query(
       `SELECT o.id AS order_id, o.total, o.status, 
-              oi.product_id, oi.quantity, oi.price, p.name
+              oi.product_id,oi.quantity, oi.price, p.name
        FROM orders o
        JOIN order_items oi ON o.id = oi.order_id
        JOIN products p ON oi.product_id = p.id
@@ -1042,7 +998,6 @@ app.get("/seller/orders", requireRole("seller"), async (req, res) => {
   }
 });
 
-// Seller Update Order Status (Approve/Process/Deliver)
 app.post(
   "/seller/orders/update-status",
   requireRole("seller"),
@@ -1061,7 +1016,6 @@ app.post(
   }
 );
 
-// Seller Reject Order
 app.post("/seller/orders/reject", requireRole("seller"), async (req, res) => {
   const { order_id } = req.body;
   const connection = await pool.promise().getConnection();
@@ -1069,13 +1023,11 @@ app.post("/seller/orders/reject", requireRole("seller"), async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // Get order items to restore stock
     const [orderItems] = await connection.query(
       "SELECT product_id, quantity FROM order_items WHERE order_id = ?",
       [order_id]
     );
 
-    // Restore product quantities
     for (const item of orderItems) {
       await connection.query(
         "UPDATE products SET quantity = quantity + ? WHERE id = ?",
@@ -1083,12 +1035,10 @@ app.post("/seller/orders/reject", requireRole("seller"), async (req, res) => {
       );
     }
 
-    // Delete order items
     await connection.query("DELETE FROM order_items WHERE order_id = ?", [
       order_id,
     ]);
 
-    // Delete order
     await connection.query("DELETE FROM orders WHERE id = ?", [order_id]);
 
     await connection.commit();
@@ -1100,6 +1050,7 @@ app.post("/seller/orders/reject", requireRole("seller"), async (req, res) => {
     connection.release();
   }
 });
+
 // SERVER
 const PORT = 3000;
 app.listen(PORT, () => {
