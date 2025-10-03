@@ -3,14 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard - Shop Easy</title>
-    <!-- <link rel="stylesheet" href="/css/customer_dashboard.css" />
-    <link rel="stylesheet" href="/css/customer_orders.css" /> -->
-    <link rel="stylesheet" href="/css/final_customer_order.css" />
+    <title>My Orders - Shop Easy</title>
+    <link rel="stylesheet" href="/css/customer_orders_clean.css" />
   </head>
   <body>
     <!-- Sidebar -->
-    <h1>Hello everyone</h1>
     <div class="sidebar">
       <div class="logo">
         <div class="logo-icon">🛒</div>
@@ -18,7 +15,7 @@
       </div>
 
       <nav class="nav">
-        <a href="/customer/dashboard" class="nav-item active">
+        <a href="/customer/dashboard" class="nav-item">
           <span class="nav-icon">🏠</span>
           <span>Dashboard</span>
         </a>
@@ -26,13 +23,13 @@
           <span class="nav-icon">🛒</span>
           <span>My Cart</span>
         </a>
-        <a href="/customer/orders" class="nav-item">
+        <a href="/customer/orders" class="nav-item active">
           <span class="nav-icon">📦</span>
           <span>My Orders</span>
         </a>
-        <a href="#" class="nav-item">
-          <span class="nav-icon">⚙️</span>
-          <span>Settings</span>
+        <a href="/customer/browse" class="nav-item">
+          <span class="nav-icon">🔍</span>
+          <span>Browse Products</span>
         </a>
       </nav>
 
@@ -90,7 +87,6 @@
 
       <!-- Charts Section -->
       <div class="charts-section">
-        <!-- Donut Chart -->
         <div class="chart-card">
           <div class="chart-title">🎯 Order Status Distribution</div>
           <div class="chart">
@@ -150,17 +146,17 @@
               </div>
               <div class="donut-legend">
                 <div class="legend-item">
-                  <div class="legend-color" style="background: #10b981"></div>
+                  <div class="legend-color legend-delivered"></div>
                   <div class="legend-text">Delivered</div>
                   <div class="legend-value"><%= deliveredOrders %></div>
                 </div>
                 <div class="legend-item">
-                  <div class="legend-color" style="background: #4facfe"></div>
+                  <div class="legend-color legend-shipped"></div>
                   <div class="legend-text">Shipped</div>
                   <div class="legend-value"><%= shippedOrders %></div>
                 </div>
                 <div class="legend-item">
-                  <div class="legend-color" style="background: #fbbf24"></div>
+                  <div class="legend-color legend-pending"></div>
                   <div class="legend-text">Pending</div>
                   <div class="legend-value"><%= pendingOrders %></div>
                 </div>
@@ -181,7 +177,7 @@
         <div class="message"><%= message %></div>
         <% } %> <% if (orders.length === 0) { %>
         <div class="no-orders">
-          <p style="font-size: 3rem; margin-bottom: 1rem">📦</p>
+          <p class="no-orders-icon">📦</p>
           <p>No orders found. Start shopping to see your orders here!</p>
         </div>
         <% } else { %> <% orders.forEach(order => { %>
@@ -196,7 +192,7 @@
             >
           </div>
 
-          <table>
+          <table class="order-table">
             <thead>
               <tr>
                 <th>Product</th>
@@ -219,7 +215,7 @@
           <form
             action="/customer/orders/cancel"
             method="POST"
-            style="display: inline"
+            class="cancel-form"
           >
             <input type="hidden" name="order_id" value="<%= order.id %>" />
             <button type="submit" class="cancel-btn">Cancel Order</button>
